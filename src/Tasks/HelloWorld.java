@@ -7,10 +7,10 @@ import star.assistant.ui.FunctionTaskController;
 @StarAssistantTask(
     display="Hello, World!",
     contentPath="XHTML/HelloWorld.xhtml",
-    controller=HelloWorld.HelloWorldController.class
+    controller=HelloWorld.AssistantTaskController.class
 )
 public class HelloWorld extends Task {
-    public class HelloWorldController extends FunctionTaskController {
+    public class AssistantTaskController extends FunctionTaskController {
         public void sayhello() {
             notifyUser("Hello, World!");
         }
