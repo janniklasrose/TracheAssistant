@@ -1,8 +1,6 @@
 package Assistant;
 
-import Tasks.Overview;
-import Tasks.Documentation;
-import Tasks.License;
+import Tasks.*; // wildcard avoids needing to change the code in 2 places
 
 import java.util.ArrayList;
 import java.util.List;
