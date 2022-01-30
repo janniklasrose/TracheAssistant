@@ -1,6 +1,6 @@
-package TracheAssistant;
+package Assistant;
 
-import TracheAssistant.Tasks.HelloWorld;
+import Tasks.HelloWorld;
 
 import java.util.ArrayList;
 import java.util.List;

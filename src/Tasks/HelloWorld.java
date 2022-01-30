@@ -1,4 +1,4 @@
-package TracheAssistant.Tasks;
+package Tasks;
 
 import star.assistant.Task;
 import star.assistant.annotation.StarAssistantTask;
@@ -6,7 +6,7 @@ import star.assistant.ui.FunctionTaskController;
 
 @StarAssistantTask(
     display="Hello, World!",
-    contentFragment="<ul><li><a href=\"staraction:sayhello\">Say Hello</a></li></ul>",
+    contentPath="XHTML/HelloWorld.xhtml",
     controller=HelloWorld.HelloWorldController.class
 )
 public class HelloWorld extends Task {
