@@ -1,6 +1,8 @@
 package Assistant;
 
-import Tasks.HelloWorld;
+import Tasks.Overview;
+import Tasks.Documentation;
+import Tasks.License;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +17,12 @@ import star.assistant.annotation.StarAssistant;
 public final class TracheAssistant extends SimulationAssistant {
     public TracheAssistant () {
         List<Task> tasks = new ArrayList<>();
-        tasks.add(new HelloWorld());
+        // Welcome
+        tasks.add(new Overview());
+        // Core tasks
+        // Documentation
+        tasks.add(new Documentation());
+        tasks.add(new License());
         setOutline(tasks);
     }
 }
