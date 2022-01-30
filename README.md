@@ -2,6 +2,11 @@
 
 STAR-CCM+ Simulation Assistant for airway CFD simulations in human tracheas.
 
+## What is this?
+
+From the STAR-CCM+ user guide:
+> A Simulation Assistant provides a visual workflow within the Simcenter STAR-CCM+ user interface (UI).
+
 ## Getting started
 
 I am using Apache NetBeans IDE 12.6 for development. The [nbproject](./nbproject/) directory in this repository contains all configuration files such that the project can be loaded and built (almost) right away.
