@@ -17,6 +17,6 @@ Within NetBeans, the STAR-CCM+ development class and javadoc paths need to be co
 
 ## Loading the simulation assistant
 
-![Hello, World!](./doc/HelloWorld.png)
+![TracheAssistant loaded in STAR-CCM+](./doc/TracheAssistant.png)
 
 In an active STAR-CCM+ session, click on `File > Load Simulation Assistant...` (red) and `Open` the file `TracheAssistant.jar`, located in the `dist` directory. This places the simulation assistant on the right of the window (green).
