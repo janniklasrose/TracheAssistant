@@ -4,7 +4,8 @@ import star.assistant.ui.FunctionTaskController;
 import star.common.Simulation;
 
 /**
- * Extends the STAR-CCM+ {@link FunctionTaskController} to provide common functionality.
+ * Extends the STAR-CCM+ {@link FunctionTaskController} to provide common
+ * functionality.
  */
 public class ExtendedFunctionTaskController extends FunctionTaskController {
 
