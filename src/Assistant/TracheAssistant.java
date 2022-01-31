@@ -18,6 +18,13 @@ public final class TracheAssistant extends SimulationAssistant {
         // Welcome
         tasks.add(new Overview());
         // Core tasks
+        tasks.add(new Geometry());
+        tasks.add(new Physics());
+        tasks.add(new Boundaries());
+        tasks.add(new Mesh());
+        tasks.add(new Analysis());
+        tasks.add(new Run());
+        tasks.add(new Process());
         // Documentation
         tasks.add(new Documentation());
         tasks.add(new License());
