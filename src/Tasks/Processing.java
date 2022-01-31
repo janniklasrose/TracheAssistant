@@ -5,11 +5,11 @@ import star.assistant.annotation.StarAssistantTask;
 import star.assistant.ui.FunctionTaskController;
 
 @StarAssistantTask(
-    display="Process",
-    contentPath="XHTML/Process.xhtml",
-    controller=Process.AssistantTaskController.class
+    display="Processing",
+    contentPath="XHTML/Processing.xhtml",
+    controller=Processing.AssistantTaskController.class
 )
-public class Process extends Task {
+public class Processing extends Task {
     public class AssistantTaskController extends FunctionTaskController {
     }
 }

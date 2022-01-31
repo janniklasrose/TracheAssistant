@@ -24,7 +24,7 @@ public final class TracheAssistant extends SimulationAssistant {
         tasks.add(new Mesh());
         tasks.add(new Analysis());
         tasks.add(new Run());
-        tasks.add(new Process());
+        tasks.add(new Processing());
         // Documentation
         tasks.add(new Documentation());
         tasks.add(new License());
