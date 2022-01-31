@@ -15,8 +15,10 @@ A recent JDK needs to be installed. I am using OpenJDK 17.0.2. The project is co
 
 Within NetBeans, the STAR-CCM+ development class and javadoc paths need to be configured. The setup assumes the library name `STAR-CCM+ 2021.2.1 (16.04.012) - JDK`. This can be changed inside [nbproject/project.properties](./nbproject/project.properties) by editing the `javac.classpath` variable.
 
+Instead of building the assistant from source, pre-built versions can be downloaded from [GitHub Releases](https://github.com/janniklasrose/TracheAssistant/releases/).
+
 ## Loading the simulation assistant
 
 ![TracheAssistant loaded in STAR-CCM+](./doc/TracheAssistant.png)
 
-In an active STAR-CCM+ session, click on `File > Load Simulation Assistant...` (red) and `Open` the file `TracheAssistant.jar`, located in the `dist` directory. This places the simulation assistant on the right of the window (green).
+In an active STAR-CCM+ session, click on `File > Load Simulation Assistant...` (red) and `Open` the file `TracheAssistant.jar`. This places the simulation assistant on the right of the window (green).
