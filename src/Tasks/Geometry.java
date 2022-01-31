@@ -1,8 +1,8 @@
 package Tasks;
 
+import Assistant.ExtendedFunctionTaskController;
 import star.assistant.Task;
 import star.assistant.annotation.StarAssistantTask;
-import star.assistant.ui.FunctionTaskController;
 
 @StarAssistantTask(
     display="Geometry",
@@ -10,6 +10,6 @@ import star.assistant.ui.FunctionTaskController;
     controller=Geometry.AssistantTaskController.class
 )
 public class Geometry extends Task {
-    public class AssistantTaskController extends FunctionTaskController {
+    public class AssistantTaskController extends ExtendedFunctionTaskController {
     }
 }

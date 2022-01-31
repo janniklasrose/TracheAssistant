@@ -1,8 +1,8 @@
 package Tasks;
 
+import Assistant.ExtendedFunctionTaskController;
 import star.assistant.Task;
 import star.assistant.annotation.StarAssistantTask;
-import star.assistant.ui.FunctionTaskController;
 
 @StarAssistantTask(
     display="Run",
@@ -10,6 +10,6 @@ import star.assistant.ui.FunctionTaskController;
     controller=Run.AssistantTaskController.class
 )
 public class Run extends Task {
-    public class AssistantTaskController extends FunctionTaskController {
+    public class AssistantTaskController extends ExtendedFunctionTaskController {
     }
 }
