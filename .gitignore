@@ -1,3 +1,7 @@
+# Apache NetBeans
 /build/
 /dist/
 /nbproject/private/
+# IntelliJ IDEA
+/out/
+/.idea/workspace.xml
