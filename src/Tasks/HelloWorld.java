@@ -1,6 +1,8 @@
 package Tasks;
 
 import Assistant.ExtendedFunctionTaskController;
+import Assistant.Workflow;
+import java.util.Collections;
 import star.assistant.Task;
 import star.assistant.annotation.StarAssistantTask;
 
@@ -10,6 +12,13 @@ import star.assistant.annotation.StarAssistantTask;
         controller = HelloWorld.AssistantTaskController.class
 )
 public class HelloWorld extends Task {
+
+    public HelloWorld() {
+        setPreconditionDescription("Pre");
+        setPreconditions(Collections.singleton(Workflow.Condition()));
+        setPostconditionDescription("Post");
+        setPostconditions(Collections.singleton(Workflow.Condition()));
+    }
 
     public class AssistantTaskController extends ExtendedFunctionTaskController {
 

@@ -8,5 +8,83 @@
 
         <h1>Selecting the appropriate physics models</h1>
 
+        <ul>
+            <li>Space:</li>
+            <ul>
+                <li>(x) Three Dimensional</li>
+                <li>( ) ...</li>
+            </ul>
+            <li>Material:</li>
+            <ul>
+                <li>(x) Gas</li>
+                <li>( ) Multi-Component Gas</li>
+                <li>( ) Multiphase</li>
+                <li>( ) ...</li>
+            </ul>
+            <li>Flow:</li>
+            <ul>
+                <li>(x) Coupled Flow</li>
+                <li>( ) Segregated Flow</li>
+                <li>[both of these enable the "Gradients" model]</li>
+            </ul>
+            <li>Equation of State:</li>
+            <ul>
+                <li>( ) Constant Density</li>
+                <li>( ) Ideal Gas</li>
+            </ul>
+        </ul>
+
+            <ul>
+                <li>
+                    <a href="staraction:setPhysicsContinuum">Set</a> the physics air continuum.
+                    <information>
+                        <br />
+                        <b>Models:</b>
+                        3D, Ideal Gas, Segregated Flow, Gravity, Turbulence
+                    </information>
+                    <ul>
+                        <!-- Time -->
+                        <li>
+                            Set the time model to <a href="staraction:setSteady">steady</a> or <a href="staraction:setUnsteady">unsteady</a>.
+                            <information>
+                                <br />
+                                <b>Steady:</b>
+                                Sets steady and asks user for number of iterations.
+                                <br />
+                                <b>Unsteady:</b>
+                                Sets implicit unsteady and asks user for time step, inner iterations, and maximum physical time.
+                            </information>
+                        </li>
+
+                        <!-- Isothermal -->
+                        <li>
+                            Set the segregated flow model to <a href="staraction:setIsothermal">isothermal</a> or <a href="staraction:setNonisothermal">non-isothermal</a>.
+                            <information>
+                                <br />
+                                <b>Isothermal:</b>
+                                Constant temperature throughout the domain.
+                                <br />
+                                <b>Non-isothermal:</b>
+                                Temperature is a variable, and radiation is enabled.
+                            </information>
+                        </li>
+
+                        <!-- Turbulence -->
+                        <li>
+                            Set the turbulence model to <a href="staraction:setRANSke">RANS_ke</a> or <a href="staraction:setRANSkw">RANS_kw</a>.
+                            <information>
+                                <br />
+                                <b>RANS_ke:</b>
+                                RANS k-epsilon.
+                                <br />
+                                <b>RANS_kw:</b>
+                                RANS k-omega.
+                            </information>
+                        </li>
+
+                    </ul>
+                </li>
+            </ul>
+
     </body>
 </html>

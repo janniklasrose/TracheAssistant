@@ -8,5 +8,39 @@
 
         <h1>Setting up the geometry</h1>
 
+        <p>
+            This task generally involves the following steps:
+            <<ol>
+                <li>Import a surface mesh of the trachea in the form of an STL file.</li>
+                <li>Create a scene to display the imported geometry.</li>
+                <li>Clean up the imported mesh.</li>
+                <!-- Clean up tasks:
+                * Explode (with STL?)
+                * Rename
+                * Delete (with STL?)
+                * Surface Repair (better manual than automatic!!!)
+                * Part operations that PRECEED the Automatic Mesh
+                -->
+            </ol>
+        </p>
+
+        <b>Completion criteria:</b>
+        If already done, try to <a href="staraction:forceConditionUpdate">force an update</a>.
+        You might have to undo the already satisfied condition (by e.g. renaming an object) to try again.
+        <ul>
+            <li>A (PART) named Trachea</li>
+            <li>A (REGION) named Airways</li>
+            <li>third</li>
+        </ul>
+
+
+        <h3>Surface mesh import</h3>
+
+        <information>
+            <br /> <!-- why? -->
+            <b>Recommended:</b>
+            A single STL file, ideally with closed surfaces (inlets/outlets).
+        </information>
+
     </body>
 </html>

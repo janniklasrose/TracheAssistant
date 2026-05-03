@@ -8,5 +8,83 @@
 
         <h1>Generating the mesh</h1>
 
+            <!-- AutomatedMesh -->
+            <ul>
+                <li>
+                    Create a part mesh operation.
+                    <information>
+                        <br />
+                        <b>Recommended:</b>
+                        <i>Automated Mesh</i> with the models <i>Surface Remesher</i>, <i>Polyhedral Mesher</i>, <i>Prism Layer Mesher</i>.
+                    </information>
+                </li>
+            </ul>
+
+            <!-- User -->
+            <ul>
+                <li>
+                    Experiment with mesh settings.
+                    <information>
+                        <br />
+                        <b>Recommended:</b>
+                        Use the <i>Intersect</i> operation to test the mesher on small regions of interest first.
+                    </information>
+                </li>
+            </ul>
+
+            <!-- Surface -->
+            <ul>
+                <li>
+                    <a href="staraction:runSurface">Generate</a> the surface mesh.
+                    <information>
+                        <br />
+                        <b>Explanation:</b>
+                        Generates the surface mesh and saves the simulation.
+                    </information>
+                </li>
+            </ul>
+
+            <!-- Volume -->
+            <ul>
+                <li>
+                    Run the volume mesher ...
+                    <ul>
+
+                        <!-- locally -->
+                        <li>
+                            <a href="staraction:runVolumeLocally">locally</a>.
+                            <information>
+                                <br />
+                                <b>Explanation:</b>
+                                Executes the meshing pipeline and saves the simulation.
+                            </information>
+                        </li>
+
+                        <!-- remotely -->
+                        <li>
+                            <a href="staraction:runVolumeRemotely">remotely</a>.
+                            <information>
+                                <br />
+                                <b>Explanation:</b>
+                                Creates a meshing macro (.java) file and a batch job submission command.
+                            </information>
+                        </li>
+                    </ul>
+
+                </li>
+            </ul>
+
+            <!-- Diagnostics -->
+            <ul>
+                <li>
+                    <a href="staraction:diagnoseMesh">Perform</a> mesh diagnostics.
+                    <information>
+                        <br />
+                        <b>Explanation:</b>
+                        Runs the native mesh diagnostics, adds quality thresholds, and creates scenes.
+                    </information>
+                </li>
+            </ul>
+
     </body>
 </html>
