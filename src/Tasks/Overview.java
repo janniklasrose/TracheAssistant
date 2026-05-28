@@ -2,6 +2,7 @@ package Tasks;
 
 import Assistant.ExtendedFunctionTaskController;
 import Assistant.InputOutput;
+import Assistant.WorkflowState;
 import star.assistant.Task;
 import star.assistant.annotation.StarAssistantTask;
 import star.common.FvRepresentation;
@@ -20,59 +21,58 @@ public class Overview extends Task {
 
         public void saveSimulation() {
             refresh();
-            InputOutput.saveSimulation(sim);
-            printMessage("Simulation saved!");
+            if (InputOutput.saveSimulation(sim)) {
+                printMessage("Simulation saved.");
+            }
         }
 
         public void createSummary() {
             refresh();
-            InputOutput.saveSummaryReport(sim);
-            printMessage("Summary saved!");
+            if (InputOutput.saveSummaryReport(sim)) {
+                printMessage("Summary report saved.");
+            }
+        }
+
+        @Override
+        protected void conditionUpdate() {
+            updateAllConditions();
         }
 
         public void updateAllConditions() {
             refresh();
 
             for (GeometryPart part : sim.getGeometryPartManager().getParts()) {
-                if (ConditionManager.satisfiesCondition_PartPresent_Cabin(part)) {
+                if (WorkflowState.isTracheaPart(part)) {
                     addToTaskLookup(part);
-                    print("Added GeometryPart '" + part.getPresentationName() + "' to Lookup!");
+                    print("Added GeometryPart '" + part.getPresentationName() + "' to lookup.");
                 }
             }
             for (Region region : sim.getRegionManager().getRegions()) {
-                if (ConditionManager.satisfiesCondition_RegionPresent_Cabin(region)) {
+                if (WorkflowState.isAirwaysRegion(region)) {
                     addToTaskLookup(region);
-                    print("Added Region '" + region.getPresentationName() + "' to Lookup!");
+                    print("Added Region '" + region.getPresentationName() + "' to lookup.");
                 }
             }
             for (PhysicsContinuum physics : sim.getContinuumManager().getObjectsOf(PhysicsContinuum.class)) {
-                if (ConditionManager.satisfiesCondition_PhysicsPresent_Air(physics)) {
+                if (WorkflowState.isAirPhysics(physics)) {
                     addToTaskLookup(physics);
-                    print("Added PhysicsContinuum '" + physics.getPresentationName() + "' to Lookup!");
-                }
-            }
-            for (Region region : sim.getRegionManager().getRegions()) {
-                if (ConditionManager.satisfiesCondition_RegionPresent_CabinWithBoundaries(region)) {
-                    addToTaskLookup(region);
-                    print("Added Region '" + region.getPresentationName() + "' to Lookup!");
+                    print("Added PhysicsContinuum '" + physics.getPresentationName() + "' to lookup.");
                 }
             }
             for (FvRepresentation representation : sim.getRepresentationManager().getObjectsOf(FvRepresentation.class)) {
-                if (ConditionManager.satisfiesCondition_MeshPresent_Cabin(representation)) {
+                if (WorkflowState.isVolumeMesh(representation)) {
                     addToTaskLookup(representation);
-                    print("Added Representation '" + representation.getPresentationName() + "' to Lookup!");
+                    print("Added Representation '" + representation.getPresentationName() + "' to lookup.");
                 }
             }
-            if (ConditionManager.satisfiesCondition_SolutionPresent_Initial(sim.getSolution())) {
+            if (WorkflowState.isInitialSolution(sim.getSolution())) {
                 addToTaskLookup(sim.getSolution());
-                print("Added Solution to Lookup!");
+                print("Added Solution to lookup.");
             }
         }
 
         public void updateAll() {
             updateAllConditions();
         }
-
     }
-
 }

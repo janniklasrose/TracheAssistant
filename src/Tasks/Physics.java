@@ -1,8 +1,11 @@
 package Tasks;
 
 import Assistant.ExtendedFunctionTaskController;
+import Assistant.PhysicsModels;
+import Assistant.WorkflowState;
 import star.assistant.Task;
 import star.assistant.annotation.StarAssistantTask;
+import star.common.PhysicsContinuum;
 
 @StarAssistantTask(
         display = "Physics",
@@ -12,36 +15,70 @@ import star.assistant.annotation.StarAssistantTask;
 public class Physics extends Task {
 
     public class AssistantTaskController extends ExtendedFunctionTaskController {
-    }
 
-}
+        @Override
+        protected void conditionUpdate() {
+            PhysicsContinuum physics = WorkflowState.airPhysics(sim);
+            if (physics != null) {
+                addToTaskLookup(physics);
+                printMessage("Added PhysicsContinuum '" + physics.getPresentationName() + "' to lookup.");
+            }
+        }
 
-//
-class ADD {
-        //setPreconditions(Collections.singleton(ConditionManager.RegionPresent_Cabin()));
-        //setPostconditions(Collections.singleton(ConditionManager.PhysicsPresent_Air()));
-        public void update() {
-            for (PhysicsContinuum physics : sim.getContinuumManager().getObjectsOf(PhysicsContinuum.class)) {
-                if (ConditionManager.satisfiesCondition_PhysicsPresent_Air(physics)) {
-                    addToTaskLookup(physics);
-                    printMessage("Added Physics[Continuum] '" + physics.getPresentationName() + "' to Lookup!");
-                }
+        public void setPhysicsContinuum() {
+            refresh();
+            PhysicsContinuum physics = PhysicsModels.setPhysicsContinuum(this);
+            if (physics != null) {
+                addToTaskLookup(physics);
+            }
+        }
+
+        public void setRANSke() {
+            refresh();
+            PhysicsContinuum physics = PhysicsModels.selectPhysics(this);
+            if (physics != null && PhysicsModels.setRANSke(this, physics)) {
+                addToTaskLookup(physics);
+            }
+        }
+
+        public void setRANSkw() {
+            refresh();
+            PhysicsContinuum physics = PhysicsModels.selectPhysics(this);
+            if (physics != null && PhysicsModels.setRANSkw(this, physics)) {
+                addToTaskLookup(physics);
+            }
+        }
+
+        public void setIsothermal() {
+            refresh();
+            PhysicsContinuum physics = PhysicsModels.selectPhysics(this);
+            if (physics != null && PhysicsModels.setIsothermal(this, physics)) {
+                addToTaskLookup(physics);
+            }
+        }
+
+        public void setNonisothermal() {
+            refresh();
+            PhysicsContinuum physics = PhysicsModels.selectPhysics(this);
+            if (physics != null && PhysicsModels.setNonisothermal(this, physics)) {
+                addToTaskLookup(physics);
+            }
+        }
+
+        public void setSteady() {
+            refresh();
+            PhysicsContinuum physics = PhysicsModels.selectPhysics(this);
+            if (physics != null && PhysicsModels.setSteady(this, physics)) {
+                addToTaskLookup(physics);
+            }
+        }
+
+        public void setUnsteady() {
+            refresh();
+            PhysicsContinuum physics = PhysicsModels.selectPhysics(this);
+            if (physics != null && PhysicsModels.setUnsteady(this, physics)) {
+                addToTaskLookup(physics);
             }
         }
     }
-}
-
-import star.common.Model;
-import star.common.ModelManager;
-import star.common.PhysicsContinuum;
-
-    // Fail-safe method for switching on or off a physics model
-    public <T extends Model> void switchModel_Physics(PhysicsContinuum physics, Class<T> type, boolean on) {
-        ModelManager modelManager = physics.getModelManager();
-        Model model = modelManager.hasObjectOfClass(type.getCanonicalName());
-        if ((on) && (model == null)) {
-            physics.enable(type);
-        } else if ((!on) && (model != null)) {
-            physics.disableModel(model);
-}
 }

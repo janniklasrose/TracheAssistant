@@ -1,8 +1,17 @@
 package Tasks;
 
 import Assistant.ExtendedFunctionTaskController;
+import Assistant.InputOutput;
+import Assistant.Monitors;
+import java.io.File;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
 import star.assistant.Task;
 import star.assistant.annotation.StarAssistantTask;
+import star.common.StarPlot;
+import star.vis.Scene;
 
 @StarAssistantTask(
         display = "Processing",
@@ -12,96 +21,91 @@ import star.assistant.annotation.StarAssistantTask;
 public class Processing extends Task {
 
     public class AssistantTaskController extends ExtendedFunctionTaskController {
-    }
 
-}
-
-        // Pre: ConditionManager.SolutionPresent_Initial
-        // Post: ConditionManager.Condition
-
-//
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import javax.swing.JList;
-import javax.swing.JOptionPane;
-
-import star.assistant.Task;
-import star.assistant.annotation.StarAssistantTask;
-import star.common.StarPlot;
-import star.vis.Scene;
-
-class ADD {
-
-        //TODO: handle cases where existing files could get overwritten
-        //TODO: handle cases where the presentationName has invalid characters
         public void exportScenes() {
-
-            sim = getActiveSimulation();
-
-            // ----------------------------------------------------------------------------------
-
-            // User selects folder
-            File folder = saveFolder("Folder for scenes", "scenes");
+            refresh();
+            File folder = InputOutput.saveFolder(sim, "Folder for scenes", "scenes");
             if (folder == null) {
                 return;
             }
 
-            // User chooses scenes to export
-            ArrayList<String> names = new ArrayList(0);
-            for (Scene scene_i : sim.getSceneManager().getScenes()) {
-                names.add(scene_i.getPresentationName());
-            }
-            JList<String> taskList = new JList(names.toArray());
-            JOptionPane.showMessageDialog(null, taskList, "Scenes to export", JOptionPane.QUESTION_MESSAGE);
-
-            // Export scenes
-            for (String name_selected : taskList.getSelectedValuesList()) {
-                Scene selected = sim.getSceneManager().getObject(name_selected);
-                selected.open(true);
-                //selected.printAndWait(resolvePath(folder.toString() + File.separator + selected.toString() + ".png"));
-                selected.close(true);
+            JList<String> sceneList = new JList<>(sceneNames());
+            JOptionPane.showMessageDialog(null, sceneList, "Scenes to export", JOptionPane.QUESTION_MESSAGE);
+            if (sceneList.getSelectedValuesList().isEmpty()) {
+                printWarning("No scenes were selected.");
+                return;
             }
 
-            // ----------------------------------------------------------------------------------
-
-            printMessage("Scenes exported!");
-
+            for (String name : sceneList.getSelectedValuesList()) {
+                Scene scene = sim.getSceneManager().getObject(name);
+                exportScene(scene, new File(folder, safeFileName(name) + ".png"));
+            }
+            printMessage("Scene export finished.");
         }
-        //TODO: handle cases where existing files could get overwritten
-        //TODO: handle cases where the presentationName has invalid characters
+
         public void exportPlots() {
-
-            sim = getActiveSimulation();
-
-            // ----------------------------------------------------------------------------------
-
-            // User selects folder
-            File folder = saveFolder("Folder for plots", "plots");
+            refresh();
+            File folder = InputOutput.saveFolder(sim, "Folder for plots", "plots");
             if (folder == null) {
                 return;
             }
 
-            // User chooses plots to export
-            ArrayList<String> names = new ArrayList(0);
-            for (StarPlot plot_i : sim.getPlotManager().getPlots()) {
-                names.add(plot_i.getPresentationName());
-            }
-            JList<String> taskList = new JList(names.toArray());
-
-            // Export plots
-            JOptionPane.showMessageDialog(null, taskList, "Plots to export", JOptionPane.QUESTION_MESSAGE);
-            for (String name_selected : taskList.getSelectedValuesList()) {
-                StarPlot selected = sim.getPlotManager().getObject(name_selected);
-                selected.open();
-                selected.encode(resolvePath(folder.toString() + File.separator + selected.toString() + ".png"), "png");
-                selected.close();
+            JList<String> plotList = new JList<>(plotNames());
+            JOptionPane.showMessageDialog(null, plotList, "Plots to export", JOptionPane.QUESTION_MESSAGE);
+            if (plotList.getSelectedValuesList().isEmpty()) {
+                printWarning("No plots were selected.");
+                return;
             }
 
-            // ----------------------------------------------------------------------------------
-
-            printMessage("Plots exported!");
-
+            for (String name : plotList.getSelectedValuesList()) {
+                StarPlot plot = sim.getPlotManager().getObject(name);
+                plot.open();
+                plot.encode(new File(folder, safeFileName(name) + ".png").toString(), "png");
+                plot.close();
+            }
+            printMessage("Plot export finished.");
         }
-}
+
+        public void setAll() {
+            refresh();
+            Monitors.setConvergence(this);
+            printMessage("Post-processing scene/report generation is WIP without the external MacroHelper library.");
+        }
+
+        private String[] sceneNames() {
+            ArrayList<String> names = new ArrayList<>();
+            for (Scene scene : sim.getSceneManager().getScenes()) {
+                names.add(scene.getPresentationName());
+            }
+            return names.toArray(new String[0]);
+        }
+
+        private String[] plotNames() {
+            ArrayList<String> names = new ArrayList<>();
+            for (StarPlot plot : sim.getPlotManager().getPlots()) {
+                names.add(plot.getPresentationName());
+            }
+            return names.toArray(new String[0]);
+        }
+
+        private void exportScene(Scene scene, File file) {
+            scene.open(true);
+            boolean exported = false;
+            try {
+                Method printAndWait = scene.getClass().getMethod("printAndWait", String.class, int.class, int.class);
+                printAndWait.invoke(scene, file.toString(), 1, 1);
+                exported = true;
+            } catch (ReflectiveOperationException ex) {
+                printWarning("Could not hardcopy scene '" + scene.getPresentationName()
+                        + "'. Opened it instead for manual export.");
+            }
+            if (exported) {
+                scene.close(true);
+            }
+        }
+
+        private String safeFileName(String name) {
+            return name.replaceAll("[^A-Za-z0-9._-]", "_");
+        }
+    }
 }

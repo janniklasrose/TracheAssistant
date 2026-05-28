@@ -1,6 +1,10 @@
 package Tasks;
 
 import Assistant.ExtendedFunctionTaskController;
+import Assistant.InputOutput;
+import Assistant.RemoteExecution;
+import Assistant.WorkflowState;
+import javax.swing.JOptionPane;
 import star.assistant.Task;
 import star.assistant.annotation.StarAssistantTask;
 
@@ -11,76 +15,43 @@ import star.assistant.annotation.StarAssistantTask;
 )
 public class Run extends Task {
 
-    public Run() {
-        //setPreconditions();
-        //setPostconditions();
-    }
-
     public class AssistantTaskController extends ExtendedFunctionTaskController {
+
+        @Override
+        protected void conditionUpdate() {
+            if (WorkflowState.isInitialSolution(sim.getSolution())) {
+                addToTaskLookup(sim.getSolution());
+                printMessage("Added Solution to lookup.");
+            }
+        }
 
         public void initializeSolution() {
             refresh();
             sim.getSolution().initializeSolution();
-            printMessage("Solution has been successfully initialized!");
+            addToTaskLookup(sim.getSolution());
+            printMessage("Solution initialized.");
         }
 
-    }
-
-}
-
-// Pre: ConditionManager.MeshPresent_Cabin
-// Post: ConditionManager.SolutionPresent_Initial
-
-//
-import star.common.Simulation;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Collections;
-
-import javax.swing.JOptionPane;
-
-import star.assistant.Task;
-import star.assistant.annotation.StarAssistantTask;
-import star.common.FvRepresentation;
-
-class ADD {
-
-        public void updateConditions() {
-            if (ConditionManager.satisfiesCondition_SolutionPresent_Initial(sim.getSolution())){
-                addToTaskLookup(sim.getSolution());
-                printMessage("Added Solution to Lookup!");
-            }
-        }
-        public void runDirectly(){
-
+        public void runDirectly() {
             refresh();
-
-            // ----------------------------------------------------------------------------------
-
-            switch (JOptionPane.showConfirmDialog(null, "To avoid crashing the solver execution, do not interact with the simulation!", "Confirmation", JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE, null)) {
-                case JOptionPane.YES_OPTION:
-                    break;
-                default:
-                    switch (JOptionPane.showConfirmDialog(null, "Do you want to execute the whole solver in batch?", "Confirmation", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null)) {
-                        case JOptionPane.YES_OPTION:
-                            createBsub();
-                            return;
-                        default:
-                            printWarning("Running the simulation ABORT-ed by user!");
-                            return;
-                    }
+            int choice = JOptionPane.showConfirmDialog(null,
+                    "To avoid crashing the solver execution, do not interact with the simulation while it runs locally.",
+                    "Confirmation", JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE);
+            if (choice != JOptionPane.OK_OPTION) {
+                printWarning("Local run aborted.");
+                return;
             }
 
-            save();
+            InputOutput.saveSimulation(sim);
             sim.getSimulationIterator().run();
-            save();
-
-            // ----------------------------------------------------------------------------------
-
-            printMessage("Run finished!");
-
+            InputOutput.saveSimulation(sim);
+            conditionUpdate();
+            printMessage("Run finished.");
         }
-}
+
+        public void createBsub() {
+            refresh();
+            RemoteExecution.createBsub(this);
+        }
+    }
 }
