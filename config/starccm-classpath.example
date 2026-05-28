@@ -1,0 +1,5 @@
+# Copy this file to config/starccm-classpath.txt or generate it with:
+#   ./scripts/generate-starccm-classpath.sh "/path/to/STAR-CCM+"
+#
+# Put one STAR-CCM+ jar path per line. Blank lines and comments are ignored.
+# /Applications/Siemens/16.04.012/STAR-CCM+16.04.012/star/lib/java/platform/modules/ext/starbase.jar
