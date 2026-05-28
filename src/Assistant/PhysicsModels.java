@@ -1,24 +1,15 @@
 package Assistant;
 
-import java.util.ArrayList;
-import java.util.Collections;
-
 import javax.swing.JOptionPane;
-
-import star.assistant.Task;
-import star.assistant.annotation.StarAssistantTask;
-import star.base.report.Monitor;
 import star.common.Continuum;
 import star.common.ImplicitUnsteadyModel;
 import star.common.ImplicitUnsteadySolver;
 import star.common.InnerIterationStoppingCriterion;
+import star.common.Model;
+import star.common.ModelManager;
 import star.common.PhysicalTimeStoppingCriterion;
 import star.common.PhysicsContinuum;
 import star.common.Region;
-import star.common.ResidualMonitor;
-import star.common.ResidualPlot;
-import star.common.Solver;
-import star.common.StarPlot;
 import star.common.SteadyModel;
 import star.common.StepStoppingCriterion;
 import star.common.TimeDiscretizationOption;
@@ -53,447 +44,269 @@ import star.viewfactors.PatchPerBFaceProportion;
 import star.viewfactors.ViewfactorsCalculatorModel;
 import star.walldistance.WallDistanceModel;
 
-public class PhysicsModels {
-    
-        // ---------- Action ----------
+public final class PhysicsModels {
 
-        //TODO: handle cases where incorrect models are activated which prevent the correct models from being added
-        public void setPhysicsContinuum() {
+    private PhysicsModels() {
+    }
 
-            sim = getActiveSimulation();
-
-            // ----------------------------------------------------------------------------------
-            physicsAir = selectPhysics();
-            if (physicsAir == null) {
-                printMessage("Physics not set!");
-                return;
-            }
-
-            // fixed
-            try {
-                switchModel_Physics(physicsAir, ThreeDimensionalModel.class, true);
-                switchModel_Physics(physicsAir, CellQualityRemediationModel.class, true);
-                switchModel_Physics(physicsAir, SingleComponentGasModel.class, true);
-                switchModel_Physics(physicsAir, SegregatedFlowModel.class, true);
-                switchModel_Physics(physicsAir, GradientsModel.class, true);
-                switchModel_Physics(physicsAir, IdealGasModel.class, true);
-                switchModel_Physics(physicsAir, PassiveScalarModel.class, true);
-                if (physicsAir.getModelManager().getModel(PassiveScalarModel.class).getPassiveScalarManager().getPassiveScalarMaterials().isEmpty()) {
-                    physicsAir.getModelManager().getModel(PassiveScalarModel.class).getPassiveScalarManager().createPassiveScalarMaterial(PassiveScalarMaterial.class);
-                }
-                switchModel_Physics(physicsAir, GravityModel.class, true);
-            } catch (Exception e) {
-                printWarning("Could not set physics models! Check existing models.");
-                return;
-            }
-            // isothermal
-            String[] isothermal_opts = {"non-isothermal", "isothermal"};
-            int isothermal = JOptionPane.showOptionDialog(null, "Please choose", "Isothermal", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, isothermal_opts, isothermal_opts[0]);
-            switch (isothermal_opts[isothermal]) {
-                case "non-isothermal":
-                    setNonisothermal(physicsAir);
-                    break;
-                case "isothermal":
-                    setIsothermal(physicsAir);
-                    break;
-                default: // CLOSE_OPTION -> non-isothermal
-                    setNonisothermal(physicsAir);
-                    break;
-            }
-            // turbulence
-            try {
-                switchModel_Physics(physicsAir, TurbulentModel.class, true);
-            } catch (Exception e) {
-                printWarning("Could not enable turbulence! Check existing models.");
-            }
-            String[] turbulence_opts = {"RANS k-epsilon", "RANS k-omega"};
-            int turbulence = JOptionPane.showOptionDialog(null, "Please choose", "Turbulence", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, turbulence_opts, turbulence_opts[0]);
-            switch (turbulence_opts[turbulence]) {
-                case "RANS k-epsilon":
-                    setRANSke(physicsAir);
-                    break;
-                case "RANS k-omega":
-                    setRANSkw(physicsAir);
-                    break;
-                default: // CLOSE_OPTION -> RANS k-epsilon
-                    setRANSke(physicsAir);
-                    break;
-            }
-            // time
-            String[] time_opts = {"steady", "unsteady"};
-            int time = JOptionPane.showOptionDialog(null, "Please choose", "Time", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, time_opts, time_opts[0]);
-            switch (time_opts[time]) {
-                case "steady":
-                    setSteady(physicsAir);
-                    break;
-                case "unsteady":
-                    setUnsteady(physicsAir);
-                    break;
-                default: // CLOSE_OPTION -> steady
-                    setSteady(physicsAir);
-                    break;
-            }
-
-            sim.getSolverManager().getSolver(PassiveScalarSolver.class).setLeaveTemporaryStorage(true);
-            sim.getSolverManager().getSolver(SegregatedFlowSolver.class).setLeaveTemporaryStorage(true);
-            sim.getSolverManager().getSolver(SegregatedFlowSolver.class).setContinuityInitialization(true);
-            sim.getSolverManager().getSolver(SegregatedEnergySolver.class).setLeaveTemporaryStorage(true);
-
-            for (Region region_i : sim.getRegionManager().getRegions()) {
-                region_i.setPhysicsContinuum(physicsAir);
-            }
-            addToTaskLookup(physicsAir);
-
-            // ----------------------------------------------------------------------------------
-            selectAndExpandNodeExclusive(physicsAir);
-            printMessage("Physics continuum set!");
-
+    public static PhysicsContinuum setPhysicsContinuum(ExtendedFunctionTaskController controller) {
+        PhysicsContinuum physics = selectPhysics(controller);
+        if (physics == null) {
+            controller.printWarning("Physics continuum was not changed.");
+            return null;
         }
 
-        private PhysicsContinuum selectPhysics() {
-
-            Continuum continuumWithName = sim.getContinuumManager().hasObject(ConditionManager.PHYSICSAIR_NAME);
-            if (continuumWithName != null && !(continuumWithName instanceof PhysicsContinuum)) {
-                printWarning("Non-physics continuum called '" + ConditionManager.PHYSICSAIR_NAME + "' had to be renamed!");
-                continuumWithName.setPresentationName(ConditionManager.PHYSICSAIR_NAME + " (old)");
+        try {
+            switchModel(physics, ThreeDimensionalModel.class, true);
+            switchModel(physics, CellQualityRemediationModel.class, true);
+            switchModel(physics, SingleComponentGasModel.class, true);
+            switchModel(physics, SegregatedFlowModel.class, true);
+            switchModel(physics, GradientsModel.class, true);
+            switchModel(physics, IdealGasModel.class, true);
+            switchModel(physics, PassiveScalarModel.class, true);
+            if (physics.getModelManager().getModel(PassiveScalarModel.class)
+                    .getPassiveScalarManager().getPassiveScalarMaterials().isEmpty()) {
+                physics.getModelManager().getModel(PassiveScalarModel.class)
+                        .getPassiveScalarManager()
+                        .createPassiveScalarMaterial(PassiveScalarMaterial.class);
             }
+            switchModel(physics, GravityModel.class, true);
+            switchModel(physics, TurbulentModel.class, true);
+        } catch (RuntimeException ex) {
+            controller.printWarning("Could not set the base physics model set: " + ex.getMessage());
+            return physics;
+        }
 
-            ArrayList<PhysicsContinuum> physicsContinua = new ArrayList(sim.getContinuumManager().getObjectsOf(PhysicsContinuum.class));
-            switch (physicsContinua.size()) {
-                case 0:
-                    PhysicsContinuum newPhysics = sim.getContinuumManager().createContinuum(PhysicsContinuum.class);
-                    newPhysics.setPresentationName(ConditionManager.PHYSICSAIR_NAME);
-                    return newPhysics;
-                case 1:
-                    PhysicsContinuum currentPhysics = physicsContinua.get(0);
-                    if (currentPhysics.getPresentationName().matches(ConditionManager.PHYSICSAIR_NAME)) {
-                        return currentPhysics;
-                    } else {
-                        currentPhysics.setPresentationName(ConditionManager.PHYSICSAIR_NAME);
-                        return currentPhysics;
-                    }
-                default:
-                    switch (JOptionPane.showConfirmDialog(null, "Already found " + physicsContinua.size() + " physics continua! I will delete them.", "Confirmation", JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE, null)) {
-                        case JOptionPane.YES_OPTION:
-                            PhysicsContinuum correctPhysics = null;
-                            for (PhysicsContinuum physics_i : sim.getContinuumManager().getObjectsOf(PhysicsContinuum.class)) {
-                                if (physics_i.getPresentationName().matches(ConditionManager.PHYSICSAIR_NAME)) {
-                                    correctPhysics = physics_i;
-                                    continue;
-                                }
-                                try {
-                                    for (Region reg : physics_i.getRegions()) {
-                                        physics_i.erase(reg);
-                                    }
-                                    try {
-                                        removeFromTaskLookup(physics_i);
-                                    } catch (Exception e) {
-                                        // not in list
-                                    }
-                                    String tempname = physics_i.getPresentationName();
-                                    sim.getContinuumManager().remove(physics_i);
-                                    printMessage("PhysicsContinuum '" + tempname + "' was successfully deleted!");
-                                } catch (Exception e) {
-                                    printWarning("Could not delete PhysicsContinuum '" + physics_i.getPresentationName() + "'");
-                                }
-                            }
-                            if (correctPhysics == null) {
-                                correctPhysics = sim.getContinuumManager().createContinuum(PhysicsContinuum.class);
-                                correctPhysics.setPresentationName(ConditionManager.PHYSICSAIR_NAME);
-                            }
-                            return correctPhysics;
-                        default:
-                            return null;
-                    }
+        String thermal = controller.promptOption("Thermal model", "Please choose the thermal model",
+                new String[]{"non-isothermal", "isothermal"}, "non-isothermal");
+        if ("isothermal".equals(thermal)) {
+            setIsothermal(controller, physics);
+        } else {
+            setNonisothermal(controller, physics);
+        }
+
+        String turbulence = controller.promptOption("Turbulence", "Please choose the turbulence model",
+                new String[]{"RANS k-epsilon", "RANS k-omega"}, "RANS k-epsilon");
+        if ("RANS k-omega".equals(turbulence)) {
+            setRANSkw(controller, physics);
+        } else {
+            setRANSke(controller, physics);
+        }
+
+        String time = controller.promptOption("Time", "Please choose the time model",
+                new String[]{"steady", "unsteady"}, "steady");
+        if ("unsteady".equals(time)) {
+            setUnsteady(controller, physics);
+        } else {
+            setSteady(controller, physics);
+        }
+
+        try {
+            controller.sim.getSolverManager().getSolver(PassiveScalarSolver.class).setLeaveTemporaryStorage(true);
+            controller.sim.getSolverManager().getSolver(SegregatedFlowSolver.class).setLeaveTemporaryStorage(true);
+            controller.sim.getSolverManager().getSolver(SegregatedFlowSolver.class).setContinuityInitialization(true);
+            controller.sim.getSolverManager().getSolver(SegregatedEnergySolver.class).setLeaveTemporaryStorage(true);
+        } catch (RuntimeException ex) {
+            controller.printWarning("Some solver initialization settings could not be applied.");
+        }
+
+        for (Region region : controller.sim.getRegionManager().getRegions()) {
+            region.setPhysicsContinuum(physics);
+        }
+
+        controller.printMessage("Physics continuum set.");
+        return physics;
+    }
+
+    public static PhysicsContinuum selectPhysics(ExtendedFunctionTaskController controller) {
+        Continuum namedContinuum = controller.sim.getContinuumManager().hasObject(WorkflowState.AIR_PHYSICS);
+        if (namedContinuum != null && !(namedContinuum instanceof PhysicsContinuum)) {
+            namedContinuum.setPresentationName(WorkflowState.AIR_PHYSICS + " (old)");
+            controller.printWarning("Renamed non-physics continuum called '" + WorkflowState.AIR_PHYSICS + "'.");
+        }
+
+        PhysicsContinuum existing = WorkflowState.airPhysics(controller.sim);
+        if (existing != null) {
+            return existing;
+        }
+
+        if (controller.sim.getContinuumManager().getObjectsOf(PhysicsContinuum.class).size() == 1) {
+            PhysicsContinuum physics = controller.sim.getContinuumManager()
+                    .getObjectsOf(PhysicsContinuum.class).iterator().next();
+            physics.setPresentationName(WorkflowState.AIR_PHYSICS);
+            return physics;
+        }
+
+        if (controller.sim.getContinuumManager().getObjectsOf(PhysicsContinuum.class).size() > 1) {
+            int choice = JOptionPane.showConfirmDialog(null,
+                    "Multiple physics continua exist. Create a new '" + WorkflowState.AIR_PHYSICS + "' continuum?",
+                    "Physics continuum", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+            if (choice != JOptionPane.YES_OPTION) {
+                return null;
             }
         }
 
-        private PhysicsContinuum physicsAir = null;
+        PhysicsContinuum physics = controller.sim.getContinuumManager().createContinuum(PhysicsContinuum.class);
+        physics.setPresentationName(WorkflowState.AIR_PHYSICS);
+        return physics;
+    }
 
-        // ---------- Action ----------
-
-        public void setRANSke() {
-
-            sim = getActiveSimulation();
-
-            // ----------------------------------------------------------------------------------
-            if (physicsAir == null) {
-                physicsAir = selectPhysics();
-                if (physicsAir == null) {
-                    printMessage("RANS k-epsilon physics not set!");
-                    return;
-                }
-            }
-
-            if (!setRANSke(physicsAir)) {
-                return;
-            }
-
-            // ----------------------------------------------------------------------------------
-            printMessage("RANS k-epsilon physics set!");
-
+    public static boolean setRANSke(ExtendedFunctionTaskController controller, PhysicsContinuum physics) {
+        if (!ensureTurbulence(controller, physics)) {
+            return false;
         }
-
-        private boolean setRANSke(PhysicsContinuum physics) {
-            if (physics.getModelManager().hasModel(TurbulentModel.class) == null) {
-                printWarning("Turbulence not enabled!");
-                return false;
-            }
-            try {
-                // kw OFF
-                switchModel_Physics(physics, KwAllYplusWallTreatment.class, false);
-                switchModel_Physics(physics, WallDistanceModel.class, false);
-                switchModel_Physics(physics, SstKwTurbModel.class, false);
-                switchModel_Physics(physics, KOmegaTurbulence.class, false);
-                switchModel_Physics(physics, RansTurbulenceModel.class, false);
-                // ke ON
-                switchModel_Physics(physics, RansTurbulenceModel.class, true);
-                switchModel_Physics(physics, KEpsilonTurbulence.class, true);
-                switchModel_Physics(physics, RkeTwoLayerTurbModel.class, true);
-                switchModel_Physics(physics, WallDistanceModel.class, true);
-                switchModel_Physics(physics, KeTwoLayerAllYplusWallTreatment.class, true);
-            } catch (Exception e) {
-                printWarning("Could not set RANS_ke! Check existing models.");
-                return false;
-            }
-
-            sim.getSolverManager().getSolver(SegregatedFlowSolver.class).setContinuityInitialization(true);
-            sim.getSolverManager().getSolver(KeTurbSolver.class).setTurbulenceInitialization(true);
-            sim.getSolverManager().getSolver(KeTurbSolver.class).setLeaveTemporaryStorage(true);
-
+        try {
+            switchModel(physics, KwAllYplusWallTreatment.class, false);
+            switchModel(physics, WallDistanceModel.class, false);
+            switchModel(physics, SstKwTurbModel.class, false);
+            switchModel(physics, KOmegaTurbulence.class, false);
+            switchModel(physics, RansTurbulenceModel.class, false);
+            switchModel(physics, RansTurbulenceModel.class, true);
+            switchModel(physics, KEpsilonTurbulence.class, true);
+            switchModel(physics, RkeTwoLayerTurbModel.class, true);
+            switchModel(physics, WallDistanceModel.class, true);
+            switchModel(physics, KeTwoLayerAllYplusWallTreatment.class, true);
+            controller.sim.getSolverManager().getSolver(SegregatedFlowSolver.class).setContinuityInitialization(true);
+            controller.sim.getSolverManager().getSolver(KeTurbSolver.class).setTurbulenceInitialization(true);
+            controller.sim.getSolverManager().getSolver(KeTurbSolver.class).setLeaveTemporaryStorage(true);
+            controller.printMessage("RANS k-epsilon physics set.");
             return true;
+        } catch (RuntimeException ex) {
+            controller.printWarning("Could not set RANS k-epsilon physics: " + ex.getMessage());
+            return false;
         }
+    }
 
-        // ---------- Action ----------
-
-        public void setRANSkw() {
-
-            sim = getActiveSimulation();
-
-            // ----------------------------------------------------------------------------------
-            if (physicsAir == null) {
-                physicsAir = selectPhysics();
-                if (physicsAir == null) {
-                    printMessage("RANS k-omega physics not set!");
-                    return;
-                }
-            }
-
-            if (!setRANSkw(physicsAir)) {
-                return;
-            }
-
-            // ----------------------------------------------------------------------------------
-            printMessage("RANS k-omega physics set!");
-
+    public static boolean setRANSkw(ExtendedFunctionTaskController controller, PhysicsContinuum physics) {
+        if (!ensureTurbulence(controller, physics)) {
+            return false;
         }
-
-        private boolean setRANSkw(PhysicsContinuum physics) {
-            if (physics.getModelManager().hasModel(TurbulentModel.class) == null) {
-                printWarning("Turbulence not enabled!");
-                return false;
-            }
-            try {
-                // ke OFF
-                switchModel_Physics(physics, KeTwoLayerAllYplusWallTreatment.class, false);
-                switchModel_Physics(physics, WallDistanceModel.class, false);
-                switchModel_Physics(physics, RkeTwoLayerTurbModel.class, false);
-                switchModel_Physics(physics, KEpsilonTurbulence.class, false);
-                switchModel_Physics(physics, RansTurbulenceModel.class, false);
-                // kw ON
-                switchModel_Physics(physics, RansTurbulenceModel.class, true);
-                switchModel_Physics(physics, KOmegaTurbulence.class, true);
-                switchModel_Physics(physics, SstKwTurbModel.class, true);
-                switchModel_Physics(physics, WallDistanceModel.class, true);
-                switchModel_Physics(physics, KwAllYplusWallTreatment.class, true);
-            } catch (Exception e) {
-                printWarning("Could not set RANS_kw! Check existing models.");
-                return false;
-            }
-
-            sim.getSolverManager().getSolver(SegregatedFlowSolver.class).setContinuityInitialization(true);
-            sim.getSolverManager().getSolver(KwTurbSolver.class).setTurbulenceInitialization(true);
-            sim.getSolverManager().getSolver(KwTurbSolver.class).setLeaveTemporaryStorage(true);
-
+        try {
+            switchModel(physics, KeTwoLayerAllYplusWallTreatment.class, false);
+            switchModel(physics, WallDistanceModel.class, false);
+            switchModel(physics, RkeTwoLayerTurbModel.class, false);
+            switchModel(physics, KEpsilonTurbulence.class, false);
+            switchModel(physics, RansTurbulenceModel.class, false);
+            switchModel(physics, RansTurbulenceModel.class, true);
+            switchModel(physics, KOmegaTurbulence.class, true);
+            switchModel(physics, SstKwTurbModel.class, true);
+            switchModel(physics, WallDistanceModel.class, true);
+            switchModel(physics, KwAllYplusWallTreatment.class, true);
+            controller.sim.getSolverManager().getSolver(SegregatedFlowSolver.class).setContinuityInitialization(true);
+            controller.sim.getSolverManager().getSolver(KwTurbSolver.class).setTurbulenceInitialization(true);
+            controller.sim.getSolverManager().getSolver(KwTurbSolver.class).setLeaveTemporaryStorage(true);
+            controller.printMessage("RANS k-omega physics set.");
             return true;
+        } catch (RuntimeException ex) {
+            controller.printWarning("Could not set RANS k-omega physics: " + ex.getMessage());
+            return false;
         }
+    }
 
-        // ---------- Action ----------
-
-        public void setIsothermal() {
-
-            sim = getActiveSimulation();
-
-            // ----------------------------------------------------------------------------------
-            if (physicsAir == null) {
-                physicsAir = selectPhysics();
-                if (physicsAir == null) {
-                    printMessage("Isothermal physics not set!");
-                    return;
-                }
-            }
-
-            if (!setIsothermal(physicsAir)) {
-                return;
-            }
-
-            // ----------------------------------------------------------------------------------
-            printMessage("Isothermal physics set!");
-
-        }
-
-        private boolean setIsothermal(PhysicsContinuum physics) {
-            if (physics.getModelManager().hasModel(SegregatedFlowModel.class) == null) {
-                printWarning("Segregated flow not enabled!");
-                return false;
-            }
-            try {
-                switchModel_Physics(physics, GrayThermalRadiationModel.class, false);
-                switchModel_Physics(physics, ViewfactorsCalculatorModel.class, false);
-                switchModel_Physics(physics, S2sModel.class, false);
-                switchModel_Physics(physics, RadiationModel.class, false);
-                switchModel_Physics(physics, SegregatedFluidTemperatureModel.class, false);
-                switchModel_Physics(physics, SegregatedFluidIsothermalModel.class, true);
-            } catch (Exception e) {
-                printWarning("Could not set isothermal! Check existing models.");
-                return false;
-            }
+    public static boolean setIsothermal(ExtendedFunctionTaskController controller, PhysicsContinuum physics) {
+        try {
+            switchModel(physics, GrayThermalRadiationModel.class, false);
+            switchModel(physics, ViewfactorsCalculatorModel.class, false);
+            switchModel(physics, S2sModel.class, false);
+            switchModel(physics, RadiationModel.class, false);
+            switchModel(physics, SegregatedFluidTemperatureModel.class, false);
+            switchModel(physics, SegregatedFluidIsothermalModel.class, true);
+            controller.printMessage("Isothermal physics set.");
             return true;
+        } catch (RuntimeException ex) {
+            controller.printWarning("Could not set isothermal physics: " + ex.getMessage());
+            return false;
         }
+    }
 
-        // ---------- Action ----------
-
-        public void setNonisothermal() {
-
-            sim = getActiveSimulation();
-
-            // ----------------------------------------------------------------------------------
-            if (physicsAir == null) {
-                physicsAir = selectPhysics();
-                if (physicsAir == null) {
-                    printMessage("Non-isothermal physics not set!");
-                    return;
-                }
+    public static boolean setNonisothermal(ExtendedFunctionTaskController controller, PhysicsContinuum physics) {
+        try {
+            switchModel(physics, SegregatedFluidIsothermalModel.class, false);
+            switchModel(physics, SegregatedFluidTemperatureModel.class, true);
+            switchModel(physics, RadiationModel.class, true);
+            switchModel(physics, S2sModel.class, true);
+            switchModel(physics, ViewfactorsCalculatorModel.class, true);
+            switchModel(physics, GrayThermalRadiationModel.class, true);
+            for (Region region : controller.sim.getRegionManager().getRegions()) {
+                region.getValues().get(PatchPerBFaceProportion.class).setPatchPerBFaceProportion(20.0);
             }
-
-            if (!setNonisothermal(physicsAir)) {
-                return;
-            }
-
-            // ----------------------------------------------------------------------------------
-            printMessage("Non-isothermal physics set!");
-
-        }
-
-        private boolean setNonisothermal(PhysicsContinuum physics) {
-            if (physics.getModelManager().hasModel(SegregatedFlowModel.class) == null) {
-                printWarning("Segregated flow not enabled!");
-                return false;
-            }
-            try {
-                switchModel_Physics(physics, SegregatedFluidIsothermalModel.class, false);
-                switchModel_Physics(physics, SegregatedFluidTemperatureModel.class, true);
-                switchModel_Physics(physics, RadiationModel.class, true);
-                switchModel_Physics(physics, S2sModel.class, true);
-                switchModel_Physics(physics, ViewfactorsCalculatorModel.class, true);
-                switchModel_Physics(physics, GrayThermalRadiationModel.class, true);
-            } catch (Exception e) {
-                printWarning("Could not set non-isothermal! Check existing models.");
-                return false;
-            }
-
-            for (Region reg_i : sim.getRegionManager().getRegions()) {
-                reg_i.getValues().get(PatchPerBFaceProportion.class).setPatchPerBFaceProportion(20.0);
-            }
-
+            controller.printMessage("Non-isothermal physics set.");
             return true;
+        } catch (RuntimeException ex) {
+            controller.printWarning("Could not set non-isothermal physics: " + ex.getMessage());
+            return false;
         }
+    }
 
-        // ---------- Action ----------
-
-        public void setSteady() {
-
-            sim = getActiveSimulation();
-
-            // ----------------------------------------------------------------------------------
-            if (physicsAir == null) {
-                physicsAir = selectPhysics();
-                if (physicsAir == null) {
-                    printMessage("Steady physics not set!");
-                    return;
-                }
-            }
-
-            if (!setSteady(physicsAir)) {
-                return;
-            }
-
-            // ----------------------------------------------------------------------------------
-            printMessage("Steady physics set!");
-
+    public static boolean setSteady(ExtendedFunctionTaskController controller, PhysicsContinuum physics) {
+        try {
+            switchModel(physics, ImplicitUnsteadyModel.class, false);
+            switchModel(physics, SteadyModel.class, true);
+            int steadyIterations = controller.promptInt("Number of steady iterations", 100);
+            StepStoppingCriterion criterion = (StepStoppingCriterion) controller.sim
+                    .getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Steps");
+            criterion.setMaximumNumberSteps(steadyIterations);
+            criterion.setIsUsed(true);
+            controller.printMessage("Steady time model set.");
+            return true;
+        } catch (RuntimeException ex) {
+            controller.printWarning("Could not set steady physics: " + ex.getMessage());
+            return false;
         }
+    }
 
-        private boolean setSteady(PhysicsContinuum physics) {
+    public static boolean setUnsteady(ExtendedFunctionTaskController controller, PhysicsContinuum physics) {
+        try {
+            switchModel(physics, SteadyModel.class, false);
+            switchModel(physics, ImplicitUnsteadyModel.class, true);
+            StepStoppingCriterion maxSteps = (StepStoppingCriterion) controller.sim
+                    .getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Steps");
+            maxSteps.setIsUsed(false);
+
+            double timeStep = controller.promptDouble("Time step [s]", 0.2);
+            ImplicitUnsteadySolver unsteadySolver = controller.sim.getSolverManager()
+                    .getSolver(ImplicitUnsteadySolver.class);
+            unsteadySolver.getTimeStep().setUnits(controller.sim.getUnitsManager().getUnits("s"));
+            unsteadySolver.getTimeStep().setValue(timeStep);
+            unsteadySolver.getTimeDiscretizationOption().setSelected(TimeDiscretizationOption.Type.SECOND_ORDER);
+
+            int innerIterations = controller.promptInt("Number of inner iterations", 10);
+            InnerIterationStoppingCriterion innerCriterion = (InnerIterationStoppingCriterion) controller.sim
+                    .getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Inner Iterations");
+            innerCriterion.setMaximumNumberInnerIterations(innerIterations);
+
+            double physicalTime = controller.promptDouble("Maximum physical time [min]", 5.0);
+            PhysicalTimeStoppingCriterion timeCriterion = (PhysicalTimeStoppingCriterion) controller.sim
+                    .getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Physical Time");
+            timeCriterion.getMaximumTime().setUnits(controller.sim.getUnitsManager().getUnits("min"));
+            timeCriterion.getMaximumTime().setValue(physicalTime);
+            controller.printMessage("Unsteady time model set.");
+            return true;
+        } catch (RuntimeException ex) {
+            controller.printWarning("Could not set unsteady physics: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    public static <T extends Model> void switchModel(PhysicsContinuum physics, Class<T> type, boolean on) {
+        ModelManager modelManager = physics.getModelManager();
+        Model model = modelManager.hasObjectOfClass(type.getCanonicalName());
+        if (on && model == null) {
+            physics.enable(type);
+        } else if (!on && model != null) {
+            physics.disableModel(model);
+        }
+    }
+
+    private static boolean ensureTurbulence(ExtendedFunctionTaskController controller, PhysicsContinuum physics) {
+        if (physics.getModelManager().hasModel(TurbulentModel.class) == null) {
             try {
-                switchModel_Physics(physics, ImplicitUnsteadyModel.class, false);
-                switchModel_Physics(physics, SteadyModel.class, true);
-            } catch (Exception e) {
-                printWarning("Could not set steady time! Check existing models.");
+                switchModel(physics, TurbulentModel.class, true);
+            } catch (RuntimeException ex) {
+                controller.printWarning("Turbulence could not be enabled.");
                 return false;
             }
-
-            int steadyIterations = promptUserForInput("Number of steady iterations", 100);
-            ((StepStoppingCriterion) sim.getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Steps")).setMaximumNumberSteps(steadyIterations);
-            ((StepStoppingCriterion) sim.getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Steps")).setIsUsed(true);
-
-            return true;
         }
-
-        // ---------- Action ----------
-
-        public void setUnsteady() {
-
-            sim = getActiveSimulation();
-
-            // ----------------------------------------------------------------------------------
-            if (physicsAir == null) {
-                physicsAir = selectPhysics();
-                if (physicsAir == null) {
-                    printMessage("Unsteady physics not set!");
-                    return;
-                }
-            }
-
-            if (!setUnsteady(physicsAir)) {
-                return;
-            }
-
-            // ----------------------------------------------------------------------------------
-            printMessage("Unsteady physics set!");
-
-        }
-
-        private boolean setUnsteady(PhysicsContinuum physics) {
-            try {
-                switchModel_Physics(physics, SteadyModel.class, false);
-                switchModel_Physics(physics, ImplicitUnsteadyModel.class, true);
-            } catch (Exception e) {
-                printWarning("Could not set unsteady time! Check existing models.");
-                return false;
-            }
-
-            ((StepStoppingCriterion) sim.getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Steps")).setIsUsed(false);
-            double timeStep = promptUserForInput("Time step [s]", 0.2);
-            sim.getSolverManager().getSolver(ImplicitUnsteadySolver.class).getTimeStep().setUnits(sim.getUnitsManager().getUnits("s"));
-            sim.getSolverManager().getSolver(ImplicitUnsteadySolver.class).getTimeStep().setValue(timeStep);
-            sim.getSolverManager().getSolver(ImplicitUnsteadySolver.class).getTimeDiscretizationOption().setSelected(TimeDiscretizationOption.Type.SECOND_ORDER);
-            int innerIterations = promptUserForInput("Number of inner iterations", 10);
-            ((InnerIterationStoppingCriterion) sim.getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Inner Iterations")).setMaximumNumberInnerIterations(innerIterations);
-            double physicalTime = promptUserForInput("Maximum physical time [min]", 5.0);
-            ((PhysicalTimeStoppingCriterion) sim.getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Physical Time")).getMaximumTime().setUnits(sim.getUnitsManager().getUnits("min"));
-            ((PhysicalTimeStoppingCriterion) sim.getSolverStoppingCriterionManager().getSolverStoppingCriterion("Maximum Physical Time")).getMaximumTime().setValue(physicalTime);
-
-            return true;
-        }
-
+        return true;
+    }
 }
