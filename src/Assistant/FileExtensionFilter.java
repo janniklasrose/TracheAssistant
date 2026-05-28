@@ -18,7 +18,8 @@ public class FileExtensionFilter extends FileFilter {
 
     @Override
     public boolean accept(File file) {
-        return file.isDirectory() // allow dirs to be able to navigate
+        return extension.matches("")
+                || file.isDirectory() // allow dirs to be able to navigate
                 || (file.isFile() // if it's a file, check for extension:
                 && file.getName().toLowerCase().endsWith(this.extension));
     }

@@ -1,218 +1,169 @@
 package Assistant;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import star.common.Simulation;
 
-// Input/Output, like saving and loading etc
+public final class InputOutput {
 
-public class InputOutput {
-
-    public boolean saveSimulation(Simulation sim) {
-        // Save
-        if (!saveAs()) {
-            return false;
-        }
-        return true;
+    private InputOutput() {
     }
 
-    public boolean saveSummaryReport(Simulation sim) {
-        // Save
-        File f = saveFile("Save summary file", ".html", sim.getPresentationName());
-        if (f == null) {
-            return false;
-        }
-        new SimulationSummaryReporter().report(sim, resolvePath(f.toString()));
-        return true
-    }
-
-}
-
-
-
-
-
-
-
-
-    public boolean saveAs() {
-        File f = saveFile("Save As...", ".sim", sim.getSessionPath());
-        if (f == null) {
-            return false;
-        }
-        sim.saveState(resolvePath(f.toString()));
-        return true;
-    }
-
-    public void save() {
+    public static boolean saveSimulation(Simulation sim) {
         String path = sim.getSessionPath();
-        if (path.matches("")) {
-            if (!saveAs()) {
-                return;
-            }
+        if (path == null || path.matches("")) {
+            return saveAs(sim);
         }
-        sim.saveState(resolvePath(path));
+        sim.saveState(resolvePath(sim, path));
+        return true;
     }
 
-    public File saveFolder(String dialogTitle) {
-        return saveFolder(dialogTitle, sim.getSessionDir());
+    public static boolean saveAs(Simulation sim) {
+        File file = saveFile(sim, "Save As...", ".sim", sim.getPresentationName());
+        if (file == null) {
+            return false;
+        }
+        sim.saveState(resolvePath(sim, file.toString()));
+        return true;
     }
 
-    //TODO: setSelectedFile() does not accept folder?
-    public File saveFolder(String dialogTitle, String preset) {
+    public static boolean saveSummaryReport(Simulation sim) {
+        File file = saveFile(sim, "Save summary file", ".html", sim.getPresentationName());
+        if (file == null) {
+            return false;
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            writer.write("<!DOCTYPE html>");
+            writer.newLine();
+            writer.write("<html><head><meta charset=\"utf-8\"><title>");
+            writer.write(escapeHtml(sim.getPresentationName()));
+            writer.write("</title></head><body>");
+            writer.newLine();
+            writer.write("<h1>");
+            writer.write(escapeHtml(sim.getPresentationName()));
+            writer.write("</h1>");
+            writer.newLine();
+            writer.write("<p>Session path: ");
+            writer.write(escapeHtml(sim.getSessionPath()));
+            writer.write("</p>");
+            writer.newLine();
+            writer.write("</body></html>");
+            writer.newLine();
+            return true;
+        } catch (IOException ex) {
+            sim.println("[ERROR] Could not write summary report: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    public static File saveFolder(Simulation sim, String dialogTitle, String preset) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setMultiSelectionEnabled(false);
         fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         fileChooser.setDialogTitle(dialogTitle);
-        if (!preset.matches("")) {
-            File pre1 = new File(preset); // absolute path given
-            File pre2 = new File(sim.getSessionDir() + File.separator + preset); // relative path given
-            if (pre1.getParentFile() != null && pre1.getParentFile().isDirectory()) {
-                fileChooser.setCurrentDirectory(pre1.getParentFile());
-                fileChooser.setSelectedFile(pre1);
-            } else if (pre2.getParentFile() != null && pre2.getParentFile().isDirectory()) {
-                fileChooser.setCurrentDirectory(pre2.getParentFile());
-                fileChooser.setSelectedFile(pre2);
-            } else {
-                fileChooser.setCurrentDirectory(new File(sim.getSessionDir()));
-            }
-        } else {
-            fileChooser.setCurrentDirectory(new File(sim.getSessionDir()));
+        setPreset(sim, fileChooser, preset);
+
+        if (fileChooser.showSaveDialog(null) != JFileChooser.APPROVE_OPTION) {
+            sim.println("[WARNING] Folder selection was aborted.");
+            return null;
         }
-        File selectedFolder;
-        switch (fileChooser.showSaveDialog(null)) {
-            case JFileChooser.APPROVE_OPTION:
-                selectedFolder = fileChooser.getSelectedFile();
-                if (!selectedFolder.exists()) {
-                    selectedFolder.mkdirs();
+
+        File folder = fileChooser.getSelectedFile();
+        if (!folder.exists()) {
+            folder.mkdirs();
+        }
+        return folder;
+    }
+
+    public static File saveFile(Simulation sim, String dialogTitle, String extension, String preset) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setMultiSelectionEnabled(false);
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooser.setFileFilter(new FileExtensionFilter(extension));
+        fileChooser.setDialogTitle(dialogTitle);
+        setPreset(sim, fileChooser, preset);
+
+        while (true) {
+            if (fileChooser.showSaveDialog(null) != JFileChooser.APPROVE_OPTION) {
+                sim.println("[WARNING] Saving " + extension + " file was aborted.");
+                return null;
+            }
+
+            File selected = withExtension(fileChooser.getSelectedFile(), extension);
+            if (selected.exists()) {
+                int overwrite = JOptionPane.showConfirmDialog(null,
+                        "Overwrite '" + selected.getName() + "'?",
+                        "Confirmation", JOptionPane.YES_NO_OPTION,
+                        JOptionPane.INFORMATION_MESSAGE);
+                if (overwrite != JOptionPane.YES_OPTION) {
+                    continue;
                 }
-                break;
-            default:
-                printWarning("Saving the folder was ABORT-ed by the user!");
-                selectedFolder = null;
-                break;
+            }
+            return selected;
         }
-        return selectedFolder;
     }
 
-    public File saveFile(String dialogTitle, String extension) {
-        return saveFile(dialogTitle, extension, "");
-    }
-
-    public File saveFile(String dialogTitle, String extension, String preset) {
+    public static File openFile(Simulation sim, String dialogTitle, String extension) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-        fileChooser.setFileFilter(new FileFilter_withExtension(extension));
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooser.setFileFilter(new FileExtensionFilter(extension));
         fileChooser.setDialogTitle(dialogTitle);
-        if (!preset.matches("")) {
-            if (!preset.endsWith(extension)) {
-                preset = preset + extension;
-            }
-            File pre1 = new File(preset); // absolute path given
-            File pre2 = new File(sim.getSessionDir() + File.separator + preset); // relative path given
-            if (pre1.getParent() != null && pre1.getParentFile().isDirectory()) {
-                fileChooser.setSelectedFile(pre1);
-            } else if (pre2.getParent() != null && pre2.getParentFile().isDirectory()) {
-                fileChooser.setSelectedFile(pre2);
-            } else {
-                fileChooser.setCurrentDirectory(new File(sim.getSessionDir()));
-            }
-        } else {
-            fileChooser.setCurrentDirectory(new File(sim.getSessionDir()));
+        setPreset(sim, fileChooser, "");
+
+        if (fileChooser.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) {
+            sim.println("[WARNING] Opening " + extension + " file was aborted.");
+            return null;
         }
-        boolean tryagain = true;
-        File selectedFile = null;
-        while (tryagain) {
-            switch (fileChooser.showSaveDialog(null)) {
-                case JFileChooser.APPROVE_OPTION:
-                    selectedFile = fileChooser.getSelectedFile();
-                    String savePath = selectedFile.toString();
-                    if (!savePath.endsWith(extension)) {
-                        selectedFile = new File(savePath + extension);
-                    }
-                    if (selectedFile.isDirectory()) {
-                        printWarning("You are trying to overwrite a directory! Pick again.");
-                        selectedFile = null;
-                        tryagain = true;
-                        break;
-                    }
-                    if (selectedFile.exists()) {
-                        printWarning("File '" + savePath + "' already exists!");
-                        switch (JOptionPane.showConfirmDialog(null, "Are you sure you want to overwrite the file?", "Confirmation", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null)) {
-                            case JOptionPane.YES_OPTION:
-                                tryagain = false;
-                                break;
-                            default:
-                                selectedFile = null;
-                                tryagain = true;
-                                break;
-                        }
-                    } else {
-                        tryagain = false;
-                    }
-                    break;
-                default:
-                    printWarning("Saving the " + extension + " file was ABORT-ed by the user!");
-                    selectedFile = null;
-                    tryagain = false;
-                    break;
-            }
-        }
-        return selectedFile;
+        return fileChooser.getSelectedFile();
     }
 
-    public File openFile(String dialogTitle, String extension) {
-        return openFile(dialogTitle, extension, "");
+    public static String resolvePath(Simulation sim, String path) {
+        File file = new File(path);
+        if (file.isAbsolute()) {
+            return file.toString();
+        }
+        return new File(sim.getSessionDir(), path).toString();
     }
 
-    public File openFile(String dialogTitle, String extension, String preset) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setFileFilter(new FileFilter_withExtension(extension));
-        fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-        fileChooser.setDialogTitle(dialogTitle);
-        if (!preset.matches("")) {
-            if (!preset.endsWith(extension)) {
-                preset = preset + extension;
-            }
-            File pre1 = new File(preset); // absolute path given
-            File pre2 = new File(sim.getSessionDir() + File.separator + preset); // relative path given
-            if (pre1.getParent() != null && pre1.getParentFile().isDirectory()) {
-                fileChooser.setSelectedFile(pre1);
-            } else if (pre2.getParent() != null && pre2.getParentFile().isDirectory()) {
-                fileChooser.setSelectedFile(pre2);
-            } else {
-                fileChooser.setCurrentDirectory(new File(sim.getSessionDir()));
-            }
+    private static void setPreset(Simulation sim, JFileChooser fileChooser, String preset) {
+        fileChooser.setCurrentDirectory(new File(sim.getSessionDir()));
+        if (preset == null || preset.matches("")) {
+            return;
+        }
+
+        File absolute = new File(preset);
+        File relative = new File(sim.getSessionDir(), preset);
+        if (absolute.getParentFile() != null && absolute.getParentFile().isDirectory()) {
+            fileChooser.setCurrentDirectory(absolute.getParentFile());
+            fileChooser.setSelectedFile(absolute);
+        } else if (relative.getParentFile() != null && relative.getParentFile().isDirectory()) {
+            fileChooser.setCurrentDirectory(relative.getParentFile());
+            fileChooser.setSelectedFile(relative);
         } else {
-            fileChooser.setCurrentDirectory(new File(sim.getSessionDir()));
+            fileChooser.setSelectedFile(relative);
         }
-        boolean tryagain = true;
-        File selectedFile = null;
-        while (tryagain) {
-            switch (fileChooser.showOpenDialog(null)) {
-                case JFileChooser.APPROVE_OPTION:
-                    selectedFile = fileChooser.getSelectedFile();
-                    String savePath = selectedFile.toString();
-                    if (!savePath.endsWith(extension)) {
-                        selectedFile = new File(savePath + extension);
-                    }
-                    if (!selectedFile.exists()) {
-                        printWarning("File '" + savePath + "' does not exist!");
-                        selectedFile = null;
-                        tryagain = true;
-                    } else {
-                        tryagain = false;
-                    }
-                    break;
-                default:
-                    printWarning("Opening the " + extension + " file was ABORT-ed by the user!");
-                    selectedFile = null;
-                    tryagain = false;
-                    break;
-            }
-        }
-        return selectedFile;
     }
+
+    private static File withExtension(File file, String extension) {
+        if (extension == null || extension.matches("") || file.toString().endsWith(extension)) {
+            return file;
+        }
+        return new File(file.toString() + extension);
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
+    }
+}

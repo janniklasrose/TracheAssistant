@@ -1,5 +1,6 @@
 package Assistant;
 
+import javax.swing.JOptionPane;
 import star.assistant.ui.FunctionTaskController;
 import star.base.neo.NamedObject;
 import star.common.Simulation;
@@ -23,7 +24,14 @@ public class ExtendedFunctionTaskController extends FunctionTaskController {
     }
 
     public void print(String message) {
+        if (sim == null) {
+            refresh();
+        }
         sim.println(message);
+    }
+
+    public void printMessage(String message) {
+        printInfo(message);
     }
 
     public void printInfo(String message) {
@@ -43,6 +51,51 @@ public class ExtendedFunctionTaskController extends FunctionTaskController {
     public void printError(String message) {
         message = "[ERROR] " + message;
         print(message);
+    }
+
+    public int promptInt(String message, int defaultValue) {
+        while (true) {
+            String input = JOptionPane.showInputDialog(null, message, defaultValue);
+            if (input == null) {
+                return defaultValue;
+            }
+            try {
+                return Integer.parseInt(input.trim());
+            } catch (NumberFormatException ex) {
+                printWarning("Expected an integer value for '" + message + "'.");
+            }
+        }
+    }
+
+    public double promptDouble(String message, double defaultValue) {
+        while (true) {
+            String input = JOptionPane.showInputDialog(null, message, defaultValue);
+            if (input == null) {
+                return defaultValue;
+            }
+            try {
+                return Double.parseDouble(input.trim());
+            } catch (NumberFormatException ex) {
+                printWarning("Expected a numeric value for '" + message + "'.");
+            }
+        }
+    }
+
+    public String promptString(String message, String defaultValue) {
+        String input = JOptionPane.showInputDialog(null, message, defaultValue);
+        if (input == null || input.trim().isEmpty()) {
+            return defaultValue;
+        }
+        return input.trim();
+    }
+
+    public String promptOption(String title, String message, String[] options, String defaultValue) {
+        Object selected = JOptionPane.showInputDialog(null, message, title,
+                JOptionPane.QUESTION_MESSAGE, null, options, defaultValue);
+        if (selected == null) {
+            return defaultValue;
+        }
+        return selected.toString();
     }
 
     protected void conditionUpdate() {
